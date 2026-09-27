@@ -99,15 +99,82 @@ To activate it:
 3. Push to `main`. The workflow builds and deploys automatically — check the
    **Actions** tab for progress, then visit the Pages URL shown there.
 
-## 🔌 Wiring up real data later
+## 🔄 Keeping listings fresh (automated, free, no scraping)
 
-Replace the contents of `src/data/listings.js` with data from:
-- A **Dubizzle**/**Bayut** scraper or their (unofficial) APIs, or
-- A backend that periodically pulls posts from **Facebook Kabayan groups**
-  (via Graph API with proper permissions, or manual curation).
+This project intentionally does **not** scrape Dubizzle/Bayut — both sites'
+Terms of Service prohibit automated scraping, and Facebook groups have no
+public feed to scrape at all. Instead, `scripts/sync-sheet.js` refreshes
+`src/data/listings.js` every morning from a **Google Sheet you maintain
+yourself**, which is a source you fully control and are authorized to
+publish. This is also the only realistic way to get Kabayan Facebook-group
+posts into the app: someone manually copies a promising post into the sheet.
 
-Keep each listing object's shape (`location`, `type`, `price`, `dewaIncluded`,
-`metroStation`, etc.) the same and the whole UI keeps working as-is.
+### 1. Create the sheet
+
+Make a Google Sheet with this exact header row (order doesn't matter, casing
+doesn't matter):
+
+```
+id, source, title, location, type, price, gender, dewaIncluded, wifiIncluded,
+metroStation, metroWalkMins, postedBy, postedVia, postedDaysAgo, notes
+```
+
+- `location` must be one of: `Deira`, `Al Karama`, `Al Satwa`, `Bur Dubai`
+- `type` must be one of: `Lower Bunk`, `Upper Bunk`, `Solo Partition`
+- `price` must be a number between 500 and 1500 (AED) — anything outside
+  that range is automatically skipped
+- `dewaIncluded` / `wifiIncluded` accept `true`/`false`/`yes`/`no`
+
+Add one row per listing (e.g. whenever you spot a good Kabayan-group post,
+copy its details into a new row).
+
+### 2. Publish the sheet as CSV
+
+File → Share → **Publish to web** → select the correct sheet/tab → format
+**Comma-separated values (.csv)** → Publish. Copy the URL it gives you (it
+looks like `https://docs.google.com/spreadsheets/d/e/.../pub?output=csv`).
+This makes only that sheet readable by anyone with the link — your Google
+account and Drive stay private.
+
+### 3. Add it as a repo secret
+
+In your GitHub repo: **Settings → Secrets and variables → Actions → New
+repository secret**, name it `SHEET_CSV_URL`, and paste the published URL.
+
+### 4. Let automation take it from here
+
+`.github/workflows/sync-listings.yml` runs every day at **8:00 AM Dubai time**
+(and can also be triggered manually from the **Actions** tab):
+
+1. Fetches your published CSV
+2. Validates and normalizes each row (bad rows are skipped with a warning,
+   never a crash)
+3. Regenerates `src/data/listings.js`
+4. Commits the change (only if something actually changed)
+5. Builds and deploys straight to GitHub Pages in the same run
+
+That last point matters: a push made with the default `GITHUB_TOKEN` does
+**not** trigger other workflows (GitHub blocks that on purpose to prevent
+recursive runs), so this workflow builds & deploys itself rather than relying
+on `deploy.yml` to notice the push.
+
+### Local testing
+
+```bash
+SHEET_CSV_URL="https://docs.google.com/.../pub?output=csv" npm run sync:sheet
+```
+
+If `SHEET_CSV_URL` is missing, or the fetch/parse fails, or zero valid rows
+come back, the script logs a clear warning and leaves your existing
+`listings.js` untouched — it will never wipe your data or break the build.
+
+### Alternative: private sheet via the Sheets API
+
+If you'd rather not publish the sheet at all (e.g. it contains a landlord's
+personal contact info you don't want indexable), a Google Service Account +
+the Sheets API (read-only, sheet shared only with the service account email)
+is a more locked-down option. That requires a few extra setup steps in Google
+Cloud Console — ask if you'd like that version instead.
 
 ## ⚠️ Disclaimer
 

@@ -17,6 +17,7 @@ export default defineConfig({
         background_color: '#ffffff',
         display: 'standalone',
         start_url: '/kabayanspacefinder/',
+        scope: '/kabayanspacefinder/',
         icons: [
           {
             src: 'icons/icon-192.png',
