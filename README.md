@@ -78,6 +78,27 @@ kabayan-space-finder/
 └── package.json
 ```
 
+## 🌐 Deploying to GitHub Pages
+
+This project is pre-configured to deploy at `https://<your-username>.github.io/kabayanspacefinder/`:
+
+- `vite.config.js` sets `base: '/kabayanspacefinder/'` so all built asset paths
+  resolve correctly under the repo subfolder (a plain `npm run build` served
+  as raw source, or missing this `base`, is what causes a blank white screen
+  on GitHub Pages).
+- `.github/workflows/deploy.yml` automatically runs `npm ci`, `npm run build`,
+  and publishes the `dist/` folder to GitHub Pages on every push to `main`.
+
+To activate it:
+
+1. Push this project to a GitHub repo named **`kabayanspacefinder`** (if you
+   use a different repo name, update the `base`, `start_url`, and `scope`
+   values in `vite.config.js` to match: `/your-repo-name/`).
+2. In the repo, go to **Settings → Pages → Build and deployment → Source**,
+   and change it to **GitHub Actions**.
+3. Push to `main`. The workflow builds and deploys automatically — check the
+   **Actions** tab for progress, then visit the Pages URL shown there.
+
 ## 🔌 Wiring up real data later
 
 Replace the contents of `src/data/listings.js` with data from:
